@@ -1,5 +1,6 @@
 let selected = null;
 let selectedYear = new Date().getFullYear();
+let selectedMonth = new Date().getMonth();
 
 const defaultTypes = [
     { key: "cabg", label: "❤️ CABG" },
@@ -101,8 +102,34 @@ function formatDate(date) {
     }).format(date);
 }
 
+function getTodayDate() {
+    return new Date();
+}
+
+function getSelectedDate() {
+    const currentDate = getTodayDate();
+    return new Date(selectedYear, selectedMonth, currentDate.getDate());
+}
+
 function updateDate() {
-    document.getElementById("todayDate").textContent = formatDate(new Date());
+    const activeDate = getSelectedDate();
+    const labelEl = document.getElementById("casesHeaderTitle");
+    if (labelEl) {
+        labelEl.textContent = new Intl.DateTimeFormat("en-US", {
+            month: "long",
+            year: "numeric"
+        }).format(activeDate);
+    }
+
+    document.getElementById("todayDate").textContent = formatDate(activeDate);
+}
+
+function goToToday() {
+    selectedYear = new Date().getFullYear();
+    selectedMonth = new Date().getMonth();
+    switchView("casesView");
+    renderCaseGrid();
+    updateDate();
 }
 
 function renderCaseGrid() {
@@ -190,15 +217,29 @@ function getAvailableYears() {
     return Array.from(years).sort((a, b) => a - b);
 }
 
+function getYearTotal(year = selectedYear) {
+    return caseRecords.filter(record => {
+        if (!record || !record.date) return false;
+        const date = new Date(record.date);
+        return !Number.isNaN(date.getTime()) && date.getFullYear() === year;
+    }).length;
+}
+
 function renderYearSelector() {
     const label = document.getElementById("statsYearLabel");
+    const yearTotalEl = document.getElementById("yearTotalDisplay");
     const caseYearTotalEl = document.getElementById("caseYearTotal");
     if (label) {
         label.textContent = String(selectedYear);
     }
 
+    const yearTotal = getYearTotal(selectedYear);
+    if (yearTotalEl) {
+        yearTotalEl.textContent = String(yearTotal);
+    }
+
     if (caseYearTotalEl) {
-        caseYearTotalEl.textContent = String(caseRecords.length);
+        caseYearTotalEl.textContent = String(yearTotal);
     }
 
     const prevBtn = document.getElementById("prevYearBtn");
@@ -251,11 +292,13 @@ function renderMonthlyStats() {
         };
     });
 
-    container.innerHTML = grouped.map(item => `
+    container.innerHTML = grouped.map((item, index) => `
         <div class="month-card">
             <div class="month-header">
-                <span>${item.month}</span>
-                <b>${item.total}</b>
+                <button type="button" class="month-name-btn" data-month-index="${index}" onclick="goToMonth(${index})">
+                    <span>${item.month}</span>
+                    <b>${item.total}</b>
+                </button>
             </div>
             <div class="month-list">
                 ${item.typeCounts.map(type => `
@@ -281,8 +324,38 @@ function switchView(viewName) {
     });
 }
 
+function goToMonth(monthIndex) {
+    selectedMonth = monthIndex;
+    switchView("casesView");
+    updateDate();
+    renderCaseGrid();
+}
+
+function getMonthDataForSelectedPeriod() {
+    const nextData = { ...defaultData };
+
+    caseTypes.forEach(type => {
+        nextData[type.key] = 0;
+    });
+
+    caseRecords.forEach(record => {
+        if (!record || typeof record.type !== "string") return;
+        if (nextData[record.type] === undefined) return;
+
+        const recordDate = new Date(record.date);
+        if (Number.isNaN(recordDate.getTime())) return;
+
+        if (recordDate.getFullYear() === selectedYear && recordDate.getMonth() === selectedMonth) {
+            nextData[record.type] += 1;
+        }
+    });
+
+    return nextData;
+}
+
 function updateDisplay() {
-    rebuildCountsFromRecords();
+    const monthData = getMonthDataForSelectedPeriod();
+    data = monthData;
     renderMonthlyStats();
 
     let total = 0;
@@ -330,7 +403,7 @@ function quick(type) {
     if (data[type] !== undefined) {
         caseRecords.push({
             type,
-            date: new Date().toISOString()
+            date: getSelectedDate().toISOString()
         });
         saveData();
         updateDisplay();
@@ -339,9 +412,19 @@ function quick(type) {
 
 function decrementCase(type) {
     if (data[type] !== undefined) {
-        const index = [...caseRecords].reverse().findIndex(record => record && record.type === type);
-        if (index !== -1) {
-            const actualIndex = caseRecords.length - 1 - index;
+        const monthMatches = [...caseRecords].reverse().findIndex(record => {
+            if (!record || record.type !== type) return false;
+            const recordDate = new Date(record.date);
+            return !Number.isNaN(recordDate.getTime())
+                && recordDate.getFullYear() === selectedYear
+                && recordDate.getMonth() === selectedMonth;
+        });
+
+        const fallbackIndex = [...caseRecords].reverse().findIndex(record => record && record.type === type);
+        const indexToUse = monthMatches !== -1 ? monthMatches : fallbackIndex;
+
+        if (indexToUse !== -1) {
+            const actualIndex = caseRecords.length - 1 - indexToUse;
             caseRecords.splice(actualIndex, 1);
             saveData();
             updateDisplay();
