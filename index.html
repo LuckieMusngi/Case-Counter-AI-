@@ -1,0 +1,543 @@
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CVOR Case Counter</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #f2f2f7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #111;
+}
+
+.phone {
+    max-width: 430px;
+    margin: 20px auto;
+    background: #fff;
+    min-height: 900px;
+    border-radius: 38px;
+    box-shadow: 0 10px 35px #0002;
+    overflow: hidden;
+}
+
+header {
+    padding: 26px 22px 15px;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-bottom: 1px solid #eee;
+}
+
+h1 {
+    font-size: 25px;
+    margin: 0;
+}
+
+.sub {
+    color: #777;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.content {
+    padding: 18px;
+}
+
+.section {
+    font-weight: 700;
+    font-size: 14px;
+    color: #666;
+    margin: 8px 2px 10px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.card {
+    border: 1px solid #e5e5e5;
+    border-radius: 18px;
+    padding: 16px;
+    background: #fff;
+}
+
+.label {
+    font-size: 14px;
+    color: #555;
+}
+
+.num {
+    font-size: 32px;
+    font-weight: 750;
+    margin: 5px 0 10px;
+}
+
+.add {
+    width: 100%;
+    border: 0;
+    border-radius: 18px;
+    padding: 17px;
+    background: #111;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    margin: 16px 0;
+}
+
+.total {
+    background: #f5f5f7;
+}
+
+.total .num {
+    font-size: 38px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    padding: 13px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.row:last-child {
+    border: 0;
+}
+
+.nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 430px;
+    width: 100%;
+    background: #fff;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 5px 13px;
+}
+
+.nav button {
+    border: 0;
+    background: none;
+    font-size: 12px;
+    color: #555;
+}
+
+.nav button.active {
+    color: #111;
+    font-weight: 700;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0007;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.sheet {
+    width: min(430px, 100%);
+    background: #fff;
+    border-radius: 28px 28px 0 0;
+    padding: 22px;
+}
+
+.types {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.type {
+    padding: 17px 8px;
+    border: 1px solid #ddd;
+    border-radius: 15px;
+    background: #fff;
+    font-weight: 650;
+}
+
+.type.selected {
+    background: #eee;
+    border-color: #111;
+}
+
+.save {
+    width: 100%;
+    padding: 16px;
+    border: 0;
+    border-radius: 15px;
+    background: #111;
+    color: white;
+    font-weight: 700;
+    font-size: 16px;
+    margin-top: 15px;
+}
+
+@media(max-width:500px) {
+    .phone {
+        margin: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .nav {
+        border-radius: 0;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="phone">
+
+<header>
+    <h1>❤️ CVOR Case Counter</h1>
+    <div class="sub">September 5, 2026</div>
+</header>
+
+<div class="content">
+
+    <div class="section">Today</div>
+
+    <div class="grid">
+
+        <div class="card">
+            <div class="label">❤️ CABG</div>
+            <div class="num" id="cabg">0</div>
+            <button onclick="quick('cabg')" class="type">+ 1 Case</button>
+        </div>
+
+        <div class="card">
+            <div class="label">🫀 Valve</div>
+            <div class="num" id="valve">0</div>
+            <button onclick="quick('valve')" class="type">+ 1 Case</button>
+        </div>
+
+        <div class="card">
+            <div class="label">🫁 Thoracic</div>
+            <div class="num" id="thoracic">0</div>
+            <button onclick="quick('thoracic')" class="type">+ 1 Case</button>
+        </div>
+
+        <div class="card">
+            <div class="label">🩸 Vascular</div>
+            <div class="num" id="vascular">0</div>
+            <button onclick="quick('vascular')" class="type">+ 1 Case</button>
+        </div>
+
+        <div class="card">
+            <div class="label">🫀 Structural / TAVR</div>
+            <div class="num" id="tavr">0</div>
+            <button onclick="quick('tavr')" class="type">+ 1 Case</button>
+        </div>
+
+        <div class="card total">
+            <div class="label">TOTAL CASES</div>
+            <div class="num" id="total">0</div>
+        </div>
+
+    </div>
+
+    <button class="add" onclick="openModal()">＋ ADD CASE</button>
+
+    <div class="section">Volume</div>
+
+    <div class="row">
+        <span>This Week</span>
+        <b id="weekTotal">0</b>
+    </div>
+
+    <div class="row">
+        <span>This Month</span>
+        <b id="monthTotal">0</b>
+    </div>
+
+    <div class="row">
+        <span>This Year</span>
+        <b id="yearTotal">0</b>
+    </div>
+
+    <div class="section" style="margin-top:22px">
+        Monthly Breakdown
+    </div>
+
+    <div class="row">
+        <span>❤️ CABG</span>
+        <b id="monthCabg">0</b>
+    </div>
+
+    <div class="row">
+        <span>🫀 Valve</span>
+        <b id="monthValve">0</b>
+    </div>
+
+    <div class="row">
+        <span>🫁 Thoracic</span>
+        <b id="monthThoracic">0</b>
+    </div>
+
+    <div class="row">
+        <span>🩸 Vascular</span>
+        <b id="monthVascular">0</b>
+    </div>
+
+    <div class="row">
+        <span>🫀 Structural / TAVR</span>
+        <b id="monthTavr">0</b>
+    </div>
+
+</div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+    <button class="active">
+        🏠<br>Dashboard
+    </button>
+
+    <button>
+        📊<br>Reports
+    </button>
+
+    <button>
+        👨‍⚕️<br>Surgeons
+    </button>
+
+    <button>
+        👥<br>Staffing
+    </button>
+
+    <button>
+        ⚙️<br>Settings
+    </button>
+</div>
+
+<!-- Add Case Modal -->
+<div class="modal" id="modal"
+     onclick="if(event.target.id==='modal') closeModal()">
+
+    <div class="sheet">
+
+        <h2 style="margin-top:0">
+            Add Case
+        </h2>
+
+        <div class="sub" style="margin-bottom:15px">
+            Select case type
+        </div>
+
+        <div class="types">
+
+            <button class="type"
+                    onclick="selectType('cabg', this)">
+                ❤️ CABG
+            </button>
+
+            <button class="type"
+                    onclick="selectType('valve', this)">
+                🫀 Valve
+            </button>
+
+            <button class="type"
+                    onclick="selectType('thoracic', this)">
+                🫁 Thoracic
+            </button>
+
+            <button class="type"
+                    onclick="selectType('vascular', this)">
+                🩸 Vascular
+            </button>
+
+            <button class="type"
+                    onclick="selectType('tavr', this)">
+                🫀 TAVR
+            </button>
+
+            <button class="type"
+                    onclick="selectType('other', this)">
+                ＋ Other
+            </button>
+
+        </div>
+
+        <button class="save" onclick="saveCase()">
+            SAVE CASE
+        </button>
+
+    </div>
+</div>
+
+<script>
+
+// Currently selected case type
+let selected = null;
+
+
+// Default data if this is the first time
+// the user opens the website
+const defaultData = {
+    cabg: 0,
+    valve: 0,
+    thoracic: 0,
+    vascular: 0,
+    tavr: 0
+};
+
+
+// Try to load previously saved data.
+// If there isn't any, use defaultData.
+let data = JSON.parse(
+    localStorage.getItem("cvorCases")
+) || defaultData;
+
+
+// Update all numbers on the page
+function updateDisplay() {
+
+    let total = 0;
+
+    for (const type in data) {
+
+        const element = document.getElementById(type);
+
+        if (element) {
+            element.textContent = data[type];
+            total += data[type];
+        }
+    }
+
+
+    // Update today's total
+    document.getElementById("total").textContent = total;
+
+
+    // For now, use the current total for these values.
+    // These can later be changed to use actual dates.
+    document.getElementById("weekTotal").textContent = total;
+    document.getElementById("monthTotal").textContent = total;
+    document.getElementById("yearTotal").textContent = total;
+
+
+    // Monthly breakdown
+    document.getElementById("monthCabg").textContent = data.cabg;
+    document.getElementById("monthValve").textContent = data.valve;
+    document.getElementById("monthThoracic").textContent = data.thoracic;
+    document.getElementById("monthVascular").textContent = data.vascular;
+    document.getElementById("monthTavr").textContent = data.tavr;
+}
+
+
+// Save the data to the browser
+function saveData() {
+
+    localStorage.setItem(
+        "cvorCases",
+        JSON.stringify(data)
+    );
+}
+
+
+// Open the Add Case modal
+function openModal() {
+
+    document.getElementById("modal").style.display = "flex";
+}
+
+
+// Close the Add Case modal
+function closeModal() {
+
+    document.getElementById("modal").style.display = "none";
+}
+
+
+// Select a case type in the modal
+function selectType(type, button) {
+
+    selected = type;
+
+
+    // Remove selected state from all buttons
+    document
+        .querySelectorAll(".types .type")
+        .forEach(button => {
+            button.classList.remove("selected");
+        });
+
+
+    // Highlight selected button
+    button.classList.add("selected");
+}
+
+
+// Add one case
+function quick(type) {
+
+    if (data[type] !== undefined) {
+
+        data[type]++;
+
+        saveData();
+
+        updateDisplay();
+    }
+}
+
+
+// Save a case from the modal
+function saveCase() {
+
+    if (!selected) {
+
+        alert("Select a case type");
+
+        return;
+    }
+
+
+    if (selected !== "other") {
+
+        quick(selected);
+    }
+
+
+    closeModal();
+
+
+    // Reset selection
+    selected = null;
+
+
+    // Remove selected styling
+    document
+        .querySelectorAll(".types .type")
+        .forEach(button => {
+            button.classList.remove("selected");
+        });
+}
+
+
+// Load saved data when the page opens
+updateDisplay();
+
+</script>
+
+</body>
+</html>
