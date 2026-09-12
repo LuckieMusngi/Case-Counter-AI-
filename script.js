@@ -9,9 +9,33 @@ const defaultTypes = [
 ];
 
 const defaultData = Object.fromEntries(defaultTypes.map(type => [type.key, 0]));
+const defaultKeySet = new Set(defaultTypes.map(type => type.key));
 
-let caseTypes = JSON.parse(localStorage.getItem("cvorCaseTypes")) || defaultTypes;
-let data = JSON.parse(localStorage.getItem("cvorCases")) || { ...defaultData };
+function ensureDefaultTypes() {
+    const stored = JSON.parse(localStorage.getItem("cvorCaseTypes") || "null");
+    const customTypes = Array.isArray(stored)
+        ? stored.filter(type => !defaultKeySet.has(type.key))
+        : [];
+
+    caseTypes = [...defaultTypes, ...customTypes];
+    localStorage.setItem("cvorCaseTypes", JSON.stringify(caseTypes));
+}
+
+let caseTypes = [];
+let data = { ...defaultData };
+
+ensureDefaultTypes();
+try {
+    const storedTypes = JSON.parse(localStorage.getItem("cvorCaseTypes") || "null");
+    const storedData = JSON.parse(localStorage.getItem("cvorCases") || "null");
+    caseTypes = Array.isArray(storedTypes) && storedTypes.length ? storedTypes : [...defaultTypes];
+    data = storedData && typeof storedData === "object" ? { ...storedData } : { ...defaultData };
+} catch (error) {
+    caseTypes = [...defaultTypes];
+    data = { ...defaultData };
+}
+
+ensureDefaultTypes();
 
 function normalizeData() {
     const currentKeys = new Set(caseTypes.map(type => type.key));
@@ -81,21 +105,24 @@ function renderTypeList() {
         button.textContent = type.label;
         button.onclick = () => selectType(type.key, button);
 
-        const removeButton = document.createElement("button");
-        removeButton.type = "button";
-        removeButton.className = "remove-type";
-        removeButton.textContent = "×";
-        removeButton.title = "Remove case type";
-        removeButton.onclick = (event) => {
-            event.stopPropagation();
-            removeCaseType(type.key);
-        };
-
         const wrapper = document.createElement("div");
         wrapper.style.display = "flex";
         wrapper.style.alignItems = "center";
         wrapper.appendChild(button);
-        wrapper.appendChild(removeButton);
+
+        if (!defaultKeySet.has(type.key)) {
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-type";
+            removeButton.textContent = "×";
+            removeButton.title = "Remove case type";
+            removeButton.onclick = (event) => {
+                event.stopPropagation();
+                removeCaseType(type.key);
+            };
+            wrapper.appendChild(removeButton);
+        }
+
         typeList.appendChild(wrapper);
     });
 }
@@ -176,6 +203,11 @@ function addCaseType() {
 }
 
 function removeCaseType(key) {
+    if (defaultKeySet.has(key)) {
+        alert("Default case types cannot be removed.");
+        return;
+    }
+
     if (caseTypes.length <= 1) {
         alert("Keep at least one case type.");
         return;
