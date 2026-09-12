@@ -18,59 +18,33 @@
 
 <div class="content">
 
-    <div class="section">Today</div>
-
-    <div class="grid" id="caseGrid"></div>
-
-    <button class="add" onclick="openModal()">＋ ADD CASE</button>
-
-    <div class="section">Volume</div>
-
-    <div class="row">
-        <span>This Week</span>
-        <b id="weekTotal">0</b>
+    <div id="casesView" class="view active">
+        <div class="section">Today</div>
+        <div class="year-total-box">
+            <span class="year-total-label">Full Total</span>
+            <strong id="caseYearTotal">0</strong>
+        </div>
+        <div class="grid" id="caseGrid"></div>
+        <button class="add" onclick="openModal()">＋ ADD CASE</button>
     </div>
 
-    <div class="row">
-        <span>This Month</span>
-        <b id="monthTotal">0</b>
-    </div>
-
-    <div class="row">
-        <span>This Year</span>
-        <b id="yearTotal">0</b>
-    </div>
-
-    <div class="section" style="margin-top:22px">
-        Monthly Breakdown
-    </div>
-
-    <div class="row">
-        <span>❤️ CABG</span>
-        <b id="monthCabg">0</b>
-    </div>
-
-    <div class="row">
-        <span>🫀 Valve</span>
-        <b id="monthValve">0</b>
-    </div>
-
-    <div class="row">
-        <span>🫁 Thoracic</span>
-        <b id="monthThoracic">0</b>
-    </div>
-
-    <div class="row">
-        <span>🩸 Vascular</span>
-        <b id="monthVascular">0</b>
-    </div>
-
-    <div class="row">
-        <span>🫀 Structural / TAVR</span>
-        <b id="monthTavr">0</b>
+    <div id="statsView" class="view">
+        <div class="section">Monthly Stats</div>
+        <div class="stats-header">
+            <button type="button" id="prevYearBtn" class="year-btn" aria-label="Previous year">‹</button>
+            <div id="statsYearLabel" class="stats-year-label">2026</div>
+            <button type="button" id="nextYearBtn" class="year-btn" aria-label="Next year">›</button>
+        </div>
+        <div id="monthlyStats" class="monthly-stats"></div>
     </div>
 
 </div>
+
+<nav class="bottom-nav" aria-label="Main navigation">
+    <button type="button" class="nav-btn active" data-view="casesView">Cases</button>
+    <button type="button" class="nav-btn" data-view="statsView">Stats</button>
+</nav>
+
 </div>
 
 <!-- Add Case Modal -->

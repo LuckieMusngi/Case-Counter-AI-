@@ -1,4 +1,5 @@
 let selected = null;
+let selectedYear = new Date().getFullYear();
 
 const defaultTypes = [
     { key: "cabg", label: "❤️ CABG" },
@@ -21,35 +22,75 @@ function ensureDefaultTypes() {
     localStorage.setItem("cvorCaseTypes", JSON.stringify(caseTypes));
 }
 
+function migrateLegacyCountsToRecords() {
+    const legacyData = JSON.parse(localStorage.getItem("cvorCases") || "null");
+
+    if (Array.isArray(legacyData)) {
+        return legacyData.filter(item => item && typeof item.type === "string" && item.date);
+    }
+
+    if (legacyData && typeof legacyData === "object") {
+        const migrated = [];
+        Object.entries(legacyData).forEach(([type, count]) => {
+            const total = Number(count || 0);
+            for (let i = 0; i < total; i++) {
+                migrated.push({
+                    type,
+                    date: new Date().toISOString()
+                });
+            }
+        });
+        return migrated;
+    }
+
+    return [];
+}
+
 let caseTypes = [];
 let data = { ...defaultData };
+let caseRecords = [];
 
 ensureDefaultTypes();
 try {
     const storedTypes = JSON.parse(localStorage.getItem("cvorCaseTypes") || "null");
-    const storedData = JSON.parse(localStorage.getItem("cvorCases") || "null");
     caseTypes = Array.isArray(storedTypes) && storedTypes.length ? storedTypes : [...defaultTypes];
-    data = storedData && typeof storedData === "object" ? { ...storedData } : { ...defaultData };
+    caseRecords = migrateLegacyCountsToRecords();
+    data = { ...defaultData };
 } catch (error) {
     caseTypes = [...defaultTypes];
+    caseRecords = [];
     data = { ...defaultData };
 }
 
 ensureDefaultTypes();
 
-function normalizeData() {
-    const currentKeys = new Set(caseTypes.map(type => type.key));
-    Object.keys(data).forEach(key => {
-        if (!currentKeys.has(key)) {
-            delete data[key];
+function rebuildCountsFromRecords() {
+    const nextData = { ...defaultData };
+
+    caseTypes.forEach(type => {
+        nextData[type.key] = 0;
+    });
+
+    caseRecords.forEach(record => {
+        if (record && typeof record.type === "string" && nextData[record.type] !== undefined) {
+            nextData[record.type] += 1;
         }
     });
+
+    data = nextData;
+}
+
+function normalizeData() {
+    const currentKeys = new Set(caseTypes.map(type => type.key));
+    caseRecords = caseRecords.filter(record => record && typeof record.type === "string" && currentKeys.has(record.type));
 
     caseTypes.forEach(type => {
         if (data[type.key] === undefined) {
             data[type.key] = 0;
         }
     });
+
+    rebuildCountsFromRecords();
 }
 
 function formatDate(date) {
@@ -76,7 +117,10 @@ function renderCaseGrid() {
         card.innerHTML = `
             <div class="label">${type.label}</div>
             <div class="num" id="${type.key}">${data[type.key] || 0}</div>
-            <button onclick="quick('${type.key}')" class="type">+ 1 Case</button>
+            <div class="case-actions">
+                <button onclick="decrementCase('${type.key}')" class="mini-button danger" aria-label="Decrease ${type.label}">−</button>
+                <button onclick="quick('${type.key}')" class="type">+ 1 Case</button>
+            </div>
         `;
         grid.appendChild(card);
     });
@@ -131,7 +175,116 @@ function saveCaseTypes() {
     localStorage.setItem("cvorCaseTypes", JSON.stringify(caseTypes));
 }
 
+function getAvailableYears() {
+    const years = new Set([new Date().getFullYear()]);
+
+    caseRecords.forEach(record => {
+        if (record && record.date) {
+            const date = new Date(record.date);
+            if (!Number.isNaN(date.getTime())) {
+                years.add(date.getFullYear());
+            }
+        }
+    });
+
+    return Array.from(years).sort((a, b) => a - b);
+}
+
+function renderYearSelector() {
+    const label = document.getElementById("statsYearLabel");
+    const caseYearTotalEl = document.getElementById("caseYearTotal");
+    if (label) {
+        label.textContent = String(selectedYear);
+    }
+
+    if (caseYearTotalEl) {
+        caseYearTotalEl.textContent = String(caseRecords.length);
+    }
+
+    const prevBtn = document.getElementById("prevYearBtn");
+    const nextBtn = document.getElementById("nextYearBtn");
+    const years = getAvailableYears();
+
+    if (prevBtn) {
+        prevBtn.disabled = years.length === 0 || selectedYear <= Math.min(...years);
+        prevBtn.style.opacity = prevBtn.disabled ? "0.4" : "1";
+    }
+
+    if (nextBtn) {
+        nextBtn.disabled = years.length === 0 || selectedYear >= Math.max(...years);
+        nextBtn.style.opacity = nextBtn.disabled ? "0.4" : "1";
+    }
+}
+
+function renderMonthlyStats() {
+    const container = document.getElementById("monthlyStats");
+    if (!container) return;
+
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const grouped = monthNames.map((month, index) => {
+        const typeCounts = caseTypes.map(type => {
+            const count = caseRecords.filter(record => {
+                const date = new Date(record.date);
+                return (
+                    record.type === type.key &&
+                    !Number.isNaN(date.getTime()) &&
+                    date.getFullYear() === selectedYear &&
+                    date.getMonth() === index
+                );
+            }).length;
+
+            return {
+                key: type.key,
+                label: type.label,
+                count
+            };
+        });
+
+        return {
+            month,
+            total: typeCounts.reduce((sum, item) => sum + item.count, 0),
+            typeCounts
+        };
+    });
+
+    container.innerHTML = grouped.map(item => `
+        <div class="month-card">
+            <div class="month-header">
+                <span>${item.month}</span>
+                <b>${item.total}</b>
+            </div>
+            <div class="month-list">
+                ${item.typeCounts.map(type => `
+                    <div class="month-type-box">
+                        <span class="month-type-label">${type.label}</span>
+                        <strong>${type.count}</strong>
+                    </div>
+                `).join("")}
+            </div>
+        </div>
+    `).join("");
+
+    renderYearSelector();
+}
+
+function switchView(viewName) {
+    document.querySelectorAll(".view").forEach(view => {
+        view.classList.toggle("active", view.id === viewName);
+    });
+
+    document.querySelectorAll(".nav-btn").forEach(button => {
+        button.classList.toggle("active", button.dataset.view === viewName);
+    });
+}
+
 function updateDisplay() {
+    rebuildCountsFromRecords();
+    renderMonthlyStats();
+
     let total = 0;
 
     caseTypes.forEach(type => {
@@ -147,7 +300,7 @@ function updateDisplay() {
 }
 
 function saveData() {
-    localStorage.setItem("cvorCases", JSON.stringify(data));
+    localStorage.setItem("cvorCases", JSON.stringify(caseRecords));
 }
 
 function openModal() {
@@ -175,9 +328,24 @@ function selectType(type, button) {
 
 function quick(type) {
     if (data[type] !== undefined) {
-        data[type]++;
+        caseRecords.push({
+            type,
+            date: new Date().toISOString()
+        });
         saveData();
         updateDisplay();
+    }
+}
+
+function decrementCase(type) {
+    if (data[type] !== undefined) {
+        const index = [...caseRecords].reverse().findIndex(record => record && record.type === type);
+        if (index !== -1) {
+            const actualIndex = caseRecords.length - 1 - index;
+            caseRecords.splice(actualIndex, 1);
+            saveData();
+            updateDisplay();
+        }
     }
 }
 
@@ -214,6 +382,7 @@ function removeCaseType(key) {
     }
 
     caseTypes = caseTypes.filter(type => type.key !== key);
+    caseRecords = caseRecords.filter(record => record.type !== key);
     delete data[key];
     saveCaseTypes();
     saveData();
@@ -233,6 +402,29 @@ function saveCase() {
     closeModal();
 }
 
+document.querySelectorAll(".nav-btn").forEach(button => {
+    button.addEventListener("click", () => switchView(button.dataset.view));
+});
+
+document.getElementById("prevYearBtn")?.addEventListener("click", () => {
+    const years = getAvailableYears();
+    if (!years.length) return;
+
+    const minYear = Math.min(...years);
+    selectedYear = Math.max(minYear, selectedYear - 1);
+    renderMonthlyStats();
+});
+
+document.getElementById("nextYearBtn")?.addEventListener("click", () => {
+    const years = getAvailableYears();
+    if (!years.length) return;
+
+    const maxYear = Math.max(...years);
+    selectedYear = Math.min(maxYear, selectedYear + 1);
+    renderMonthlyStats();
+});
+
 normalizeData();
 updateDate();
 renderCaseGrid();
+renderMonthlyStats();
