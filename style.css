@@ -168,6 +168,38 @@ h1 {
     border-color: #111;
 }
 
+.case-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.case-form input {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 15px;
+}
+
+.small-button {
+    border: 0;
+    border-radius: 12px;
+    background: #111;
+    color: #fff;
+    font-weight: 700;
+    padding: 0 16px;
+}
+
+.remove-type {
+    margin-left: 8px;
+    border: 0;
+    background: none;
+    color: #b00020;
+    font-size: 18px;
+    font-weight: 700;
+}
+
 .save {
     width: 100%;
     padding: 16px;

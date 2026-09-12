@@ -13,51 +13,14 @@
 
 <header>
     <h1>❤️ CVOR Case Counter</h1>
-    <div class="sub">September 5, 2026</div>
+    <div class="sub" id="todayDate">Loading date...</div>
 </header>
 
 <div class="content">
 
     <div class="section">Today</div>
 
-    <div class="grid">
-
-        <div class="card">
-            <div class="label">❤️ CABG</div>
-            <div class="num" id="cabg">0</div>
-            <button onclick="quick('cabg')" class="type">+ 1 Case</button>
-        </div>
-
-        <div class="card">
-            <div class="label">🫀 Valve</div>
-            <div class="num" id="valve">0</div>
-            <button onclick="quick('valve')" class="type">+ 1 Case</button>
-        </div>
-
-        <div class="card">
-            <div class="label">🫁 Thoracic</div>
-            <div class="num" id="thoracic">0</div>
-            <button onclick="quick('thoracic')" class="type">+ 1 Case</button>
-        </div>
-
-        <div class="card">
-            <div class="label">🩸 Vascular</div>
-            <div class="num" id="vascular">0</div>
-            <button onclick="quick('vascular')" class="type">+ 1 Case</button>
-        </div>
-
-        <div class="card">
-            <div class="label">🫀 Structural / TAVR</div>
-            <div class="num" id="tavr">0</div>
-            <button onclick="quick('tavr')" class="type">+ 1 Case</button>
-        </div>
-
-        <div class="card total">
-            <div class="label">TOTAL CASES</div>
-            <div class="num" id="total">0</div>
-        </div>
-
-    </div>
+    <div class="grid" id="caseGrid"></div>
 
     <button class="add" onclick="openModal()">＋ ADD CASE</button>
 
@@ -82,30 +45,7 @@
         Monthly Breakdown
     </div>
 
-    <div class="row">
-        <span>❤️ CABG</span>
-        <b id="monthCabg">0</b>
-    </div>
-
-    <div class="row">
-        <span>🫀 Valve</span>
-        <b id="monthValve">0</b>
-    </div>
-
-    <div class="row">
-        <span>🫁 Thoracic</span>
-        <b id="monthThoracic">0</b>
-    </div>
-
-    <div class="row">
-        <span>🩸 Vascular</span>
-        <b id="monthVascular">0</b>
-    </div>
-
-    <div class="row">
-        <span>🫀 Structural / TAVR</span>
-        <b id="monthTavr">0</b>
-    </div>
+    <div id="monthlyBreakdown"></div>
 
 </div>
 </div>
@@ -147,39 +87,12 @@
             Select case type
         </div>
 
-        <div class="types">
-
-            <button class="type"
-                    onclick="selectType('cabg', this)">
-                ❤️ CABG
-            </button>
-
-            <button class="type"
-                    onclick="selectType('valve', this)">
-                🫀 Valve
-            </button>
-
-            <button class="type"
-                    onclick="selectType('thoracic', this)">
-                🫁 Thoracic
-            </button>
-
-            <button class="type"
-                    onclick="selectType('vascular', this)">
-                🩸 Vascular
-            </button>
-
-            <button class="type"
-                    onclick="selectType('tavr', this)">
-                🫀 TAVR
-            </button>
-
-            <button class="type"
-                    onclick="selectType('other', this)">
-                ＋ Other
-            </button>
-
+        <div class="case-form">
+            <input id="newTypeName" type="text" placeholder="New case type" maxlength="30">
+            <button class="small-button" type="button" onclick="addCaseType()">Add</button>
         </div>
+
+        <div class="types" id="typeList"></div>
 
         <button class="save" onclick="saveCase()">
             SAVE CASE
