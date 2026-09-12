@@ -40,23 +40,6 @@ function updateDate() {
     document.getElementById("todayDate").textContent = formatDate(new Date());
 }
 
-function renderMonthlyBreakdown() {
-    const container = document.getElementById("monthlyBreakdown");
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    caseTypes.forEach(type => {
-        const row = document.createElement("div");
-        row.className = "row";
-        row.innerHTML = `
-            <span>${type.label}</span>
-            <b>${data[type.key] || 0}</b>
-        `;
-        container.appendChild(row);
-    });
-}
-
 function renderCaseGrid() {
     const grid = document.getElementById("caseGrid");
     if (!grid) return;
@@ -134,11 +117,6 @@ function updateDisplay() {
 
     const totalEl = document.getElementById("total");
     if (totalEl) totalEl.textContent = total;
-    if (document.getElementById("weekTotal")) document.getElementById("weekTotal").textContent = total;
-    if (document.getElementById("monthTotal")) document.getElementById("monthTotal").textContent = total;
-    if (document.getElementById("yearTotal")) document.getElementById("yearTotal").textContent = total;
-
-    renderMonthlyBreakdown();
 }
 
 function saveData() {
@@ -225,5 +203,4 @@ function saveCase() {
 
 normalizeData();
 updateDate();
-renderMonthlyBreakdown();
 renderCaseGrid();
