@@ -111,6 +111,15 @@ function getSelectedDate() {
     return new Date(selectedYear, selectedMonth, currentDate.getDate());
 }
 
+function getCountColor(value) {
+    const safeValue = Math.min(Math.max(Number(value) || 0, 0), 5);
+    const ratio = safeValue / 5;
+    const hue = 210 - (ratio * 18);
+    const saturation = 72 + (ratio * 22);
+    const lightness = 98 - (ratio * 52);
+    return `hsl(${hue} ${saturation}% ${lightness}%)`;
+}
+
 function updateDate() {
     const activeDate = getSelectedDate();
     const labelEl = document.getElementById("casesHeaderTitle");
@@ -141,9 +150,11 @@ function renderCaseGrid() {
     caseTypes.forEach(type => {
         const card = document.createElement("div");
         card.className = "card";
+
+        const typeCount = data[type.key] || 0;
         card.innerHTML = `
             <div class="label">${type.label}</div>
-            <div class="num" id="${type.key}">${data[type.key] || 0}</div>
+            <div class="num" id="${type.key}" style="color: ${getCountColor(typeCount)}">${typeCount}</div>
             <div class="case-actions">
                 <button onclick="decrementCase('${type.key}')" class="mini-button danger" aria-label="Decrease ${type.label}">−</button>
                 <button onclick="quick('${type.key}')" class="type">+ 1 Case</button>
@@ -244,16 +255,15 @@ function renderYearSelector() {
 
     const prevBtn = document.getElementById("prevYearBtn");
     const nextBtn = document.getElementById("nextYearBtn");
-    const years = getAvailableYears();
 
     if (prevBtn) {
-        prevBtn.disabled = years.length === 0 || selectedYear <= Math.min(...years);
-        prevBtn.style.opacity = prevBtn.disabled ? "0.4" : "1";
+        prevBtn.disabled = false;
+        prevBtn.style.opacity = "1";
     }
 
     if (nextBtn) {
-        nextBtn.disabled = years.length === 0 || selectedYear >= Math.max(...years);
-        nextBtn.style.opacity = nextBtn.disabled ? "0.4" : "1";
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = "1";
     }
 }
 
@@ -265,6 +275,15 @@ function renderMonthlyStats() {
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ];
+
+    const monthTotalColor = (value) => {
+        const safeValue = Math.min(Math.max(Number(value) || 0, 0), 15);
+        const ratio = safeValue / 15;
+        const hue = 210 - (ratio * 18);
+        const saturation = 72 + (ratio * 22);
+        const lightness = 98 - (ratio * 52);
+        return `hsl(${hue} ${saturation}% ${lightness}%)`;
+    };
 
     const grouped = monthNames.map((month, index) => {
         const typeCounts = caseTypes.map(type => {
@@ -297,14 +316,14 @@ function renderMonthlyStats() {
             <div class="month-header">
                 <button type="button" class="month-name-btn" data-month-index="${index}" onclick="goToMonth(${index})">
                     <span>${item.month}</span>
-                    <b>${item.total}</b>
+                    <b style="color: ${monthTotalColor(item.total)}">${item.total}</b>
                 </button>
             </div>
             <div class="month-list">
                 ${item.typeCounts.map(type => `
                     <div class="month-type-box">
                         <span class="month-type-label">${type.label}</span>
-                        <strong>${type.count}</strong>
+                        <strong style="color: ${getCountColor(type.count)}">${type.count}</strong>
                     </div>
                 `).join("")}
             </div>
@@ -362,9 +381,11 @@ function updateDisplay() {
 
     caseTypes.forEach(type => {
         const element = document.getElementById(type.key);
+        const value = Number(data[type.key] || 0);
         if (element) {
-            element.textContent = data[type.key] || 0;
-            total += Number(data[type.key] || 0);
+            element.textContent = value;
+            element.style.color = getCountColor(value);
+            total += value;
         }
     });
 
@@ -464,6 +485,16 @@ function removeCaseType(key) {
         return;
     }
 
+    const typeToRemove = caseTypes.find(type => type.key === key);
+    const typeLabel = typeToRemove ? typeToRemove.label : "This case type";
+    const confirmed = window.confirm(
+        `Are you sure you want to remove "${typeLabel}"? This will permanently delete all saved cases for this type from every month and year.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
     caseTypes = caseTypes.filter(type => type.key !== key);
     caseRecords = caseRecords.filter(record => record.type !== key);
     delete data[key];
@@ -490,20 +521,12 @@ document.querySelectorAll(".nav-btn").forEach(button => {
 });
 
 document.getElementById("prevYearBtn")?.addEventListener("click", () => {
-    const years = getAvailableYears();
-    if (!years.length) return;
-
-    const minYear = Math.min(...years);
-    selectedYear = Math.max(minYear, selectedYear - 1);
+    selectedYear -= 1;
     renderMonthlyStats();
 });
 
 document.getElementById("nextYearBtn")?.addEventListener("click", () => {
-    const years = getAvailableYears();
-    if (!years.length) return;
-
-    const maxYear = Math.max(...years);
-    selectedYear = Math.min(maxYear, selectedYear + 1);
+    selectedYear += 1;
     renderMonthlyStats();
 });
 
