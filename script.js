@@ -257,7 +257,7 @@ function renderCaseGrid() {
             <div class="num" id="${type.key}" style="color: ${getCountColor(typeCount)}">${typeCount}</div>
             <div class="case-actions">
                 <button onclick="decrementCase('${type.key}')" class="mini-button danger" aria-label="Decrease ${type.label}">−</button>
-                <button onclick="quick('${type.key}')" class="type">+ 1 Case</button>
+                <button onclick="quick('${type.key}')" class="mini-button primary" aria-label="Increase ${type.label}">＋</button>
             </div>
         `;
         grid.appendChild(card);
