@@ -12,7 +12,11 @@
 <div class="phone">
 
 <header>
-    <h1>❤️ CVOR Case Counter</h1>
+    <div class="section-switcher" aria-label="Case section switcher">
+        <button type="button" id="prevSectionBtn" class="year-btn" aria-label="Previous section">‹</button>
+        <h1 id="sectionTitle">Heart Case Counter</h1>
+        <button type="button" id="nextSectionBtn" class="year-btn" aria-label="Next section">›</button>
+    </div>
     <div class="sub" id="todayDate">Loading date...</div>
 </header>
 
@@ -41,11 +45,19 @@
         <div id="monthlyStats" class="monthly-stats"></div>
     </div>
 
+    <div id="proceduresView" class="view">
+        <div class="section-row">
+            <div class="section">Additional Procedures</div>
+        </div>
+        <div class="procedure-grid" id="procedureGrid"></div>
+    </div>
+
 </div>
 
 <nav class="bottom-nav" aria-label="Main navigation">
     <button type="button" class="nav-btn active" data-view="casesView">Cases</button>
     <button type="button" class="nav-btn" data-view="statsView">Stats</button>
+    <button type="button" class="nav-btn" data-view="proceduresView">Procedures</button>
 </nav>
 
 </div>

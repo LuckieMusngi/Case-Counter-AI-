@@ -3,20 +3,96 @@ let selectedYear = new Date().getFullYear();
 let selectedMonth = new Date().getMonth();
 
 const defaultTypes = [
-    { key: "cabg", label: "❤️ CABG" },
-    { key: "valve", label: "🫀 Valve" },
-    { key: "thoracic", label: "🫁 Thoracic" },
-    { key: "vascular", label: "🩸 Vascular" },
-    { key: "tavr", label: "🫀 TAVR" }
+    { key: "cabg", label: "CABG" },
+    { key: "avr", label: "AVR" },
+    { key: "mvr", label: "MVR" },
+    { key: "tvr", label: "TVR" },
+    { key: "cabg_valve", label: "CABG+Valve" },
+    { key: "double_valves", label: "Double Valves" }
 ];
 
-const defaultData = Object.fromEntries(defaultTypes.map(type => [type.key, 0]));
+const additionalProcedureDefaults = [
+    { key: "redo", label: "Redo" },
+    { key: "pericardial_window", label: "Pericardial Window" },
+    { key: "sternal_id", label: "Sternal I&D" },
+    { key: "reopining", label: "Reopining" },
+    { key: "iabp", label: "IABP" },
+    { key: "impella", label: "Impella" }
+];
+
+const stalePlaceholderKeySet = new Set(["valve", "thoracic", "vascular", "tavr"]);
+let defaultData = {};
 const defaultKeySet = new Set(defaultTypes.map(type => type.key));
+const sectionOrder = ["heart", "thoracic", "structural"];
+const sectionLabels = {
+    heart: "Heart",
+    thoracic: "Thoracic",
+    structural: "Structural Heart"
+};
+const sectionTypeSets = {
+    heart: [
+        { key: "cabg", label: "CABG" },
+        { key: "avr", label: "AVR" },
+        { key: "mvr", label: "MVR" },
+        { key: "tvr", label: "TVR" },
+        { key: "cabg_valve", label: "CABG+Valve" },
+        { key: "double_valves", label: "Double Valves" }
+    ],
+    thoracic: [
+        { key: "lobectomy_general", label: "Lobectomy" },
+        { key: "decortication_general", label: "Decortication" }
+    ],
+    structural: [
+        { key: "TAVR_general", label: "TAVR" }
+    ]
+};
+
+function getDefaultProcedureCounts() {
+    return Object.fromEntries(additionalProcedureDefaults.map(proc => [proc.key, 0]));
+}
+
+function getSectionTypeDefaults(sectionKey) {
+    return (sectionTypeSets[sectionKey] || sectionTypeSets.heart).map(type => ({ ...type }));
+}
+
+function saveCurrentSectionState() {
+    localStorage.setItem(`cvorCaseTypes_${activeSection}`, JSON.stringify(caseTypes));
+    localStorage.setItem(`cvorCases_${activeSection}`, JSON.stringify(caseRecords));
+    localStorage.setItem(`cvorAdditionalProcedures_${activeSection}`, JSON.stringify(additionalProcedureCounts));
+    localStorage.setItem("cvorActiveSection", activeSection);
+}
+
+function loadSectionState(sectionKey) {
+    const types = JSON.parse(localStorage.getItem(`cvorCaseTypes_${sectionKey}`) || "null");
+    const records = JSON.parse(localStorage.getItem(`cvorCases_${sectionKey}`) || "null");
+    const procedures = JSON.parse(localStorage.getItem(`cvorAdditionalProcedures_${sectionKey}`) || "null");
+
+    caseTypes = Array.isArray(types) && types.length ? types : getSectionTypeDefaults(sectionKey);
+    caseRecords = Array.isArray(records) ? records : [];
+    additionalProcedureCounts = typeof procedures === "object" && procedures !== null
+        ? { ...getDefaultProcedureCounts(), ...procedures }
+        : getDefaultProcedureCounts();
+    defaultData = Object.fromEntries(caseTypes.map(type => [type.key, 0]));
+
+    localStorage.setItem(`cvorCaseTypes_${sectionKey}`, JSON.stringify(caseTypes));
+    localStorage.setItem(`cvorCases_${sectionKey}`, JSON.stringify(caseRecords));
+    localStorage.setItem(`cvorAdditionalProcedures_${sectionKey}`, JSON.stringify(additionalProcedureCounts));
+}
+
+function resetSavedAppState() {
+    sectionOrder.forEach(sectionKey => {
+        const sectionTypes = getSectionTypeDefaults(sectionKey);
+        localStorage.setItem(`cvorCaseTypes_${sectionKey}`, JSON.stringify(sectionTypes));
+        localStorage.setItem(`cvorCases_${sectionKey}`, JSON.stringify([]));
+        localStorage.setItem(`cvorAdditionalProcedures_${sectionKey}`, JSON.stringify(getDefaultProcedureCounts()));
+    });
+    localStorage.setItem("cvorActiveSection", "heart");
+}
 
 function ensureDefaultTypes() {
     const stored = JSON.parse(localStorage.getItem("cvorCaseTypes") || "null");
     const customTypes = Array.isArray(stored)
-        ? stored.filter(type => !defaultKeySet.has(type.key))
+        ? stored.filter(type => type && typeof type.key === "string" && !defaultKeySet.has(type.key) && !stalePlaceholderKeySet.has(type.key))
         : [];
 
     caseTypes = [...defaultTypes, ...customTypes];
@@ -47,23 +123,47 @@ function migrateLegacyCountsToRecords() {
     return [];
 }
 
+let activeSection = localStorage.getItem("cvorActiveSection") || "heart";
 let caseTypes = [];
-let data = { ...defaultData };
+let data = {};
 let caseRecords = [];
+let additionalProcedureCounts = getDefaultProcedureCounts();
 
-ensureDefaultTypes();
-try {
-    const storedTypes = JSON.parse(localStorage.getItem("cvorCaseTypes") || "null");
-    caseTypes = Array.isArray(storedTypes) && storedTypes.length ? storedTypes : [...defaultTypes];
-    caseRecords = migrateLegacyCountsToRecords();
-    data = { ...defaultData };
-} catch (error) {
-    caseTypes = [...defaultTypes];
-    caseRecords = [];
-    data = { ...defaultData };
+if (!localStorage.getItem("cvorActiveSection")) {
+    localStorage.setItem("cvorActiveSection", activeSection);
 }
 
-ensureDefaultTypes();
+sectionOrder.forEach(sectionKey => {
+    if (!localStorage.getItem(`cvorCaseTypes_${sectionKey}`)) {
+        localStorage.setItem(`cvorCaseTypes_${sectionKey}`, JSON.stringify(getSectionTypeDefaults(sectionKey)));
+    }
+    if (!localStorage.getItem(`cvorCases_${sectionKey}`)) {
+        localStorage.setItem(`cvorCases_${sectionKey}`, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(`cvorAdditionalProcedures_${sectionKey}`)) {
+        localStorage.setItem(`cvorAdditionalProcedures_${sectionKey}`, JSON.stringify(getDefaultProcedureCounts()));
+    }
+});
+
+loadSectionState(activeSection);
+
+function updateSectionHeader() {
+    const titleEl = document.getElementById("sectionTitle");
+    if (titleEl) {
+        titleEl.textContent = `${sectionLabels[activeSection]} Case Counter`;
+    }
+}
+
+function switchSection(nextSection) {
+    if (!sectionOrder.includes(nextSection)) return;
+    saveCurrentSectionState();
+    activeSection = nextSection;
+    loadSectionState(activeSection);
+    updateSectionHeader();
+    renderCaseGrid();
+    renderMonthlyStats();
+    renderAdditionalProcedures();
+}
 
 function rebuildCountsFromRecords() {
     const nextData = { ...defaultData };
@@ -174,6 +274,92 @@ function renderCaseGrid() {
     updateDisplay();
 }
 
+function isThoracicType(type) {
+    const text = `${type.label} ${type.key}`.toLowerCase();
+    return /thoracic/.test(text);
+}
+
+function isStructuralType(type) {
+    const text = `${type.label} ${type.key}`.toLowerCase();
+    return /(structural|tavr|teer|mitral|tricuspid|asd|pfo|coarctation|valve)/.test(text);
+}
+
+function getCategoryTotal(category) {
+    if (category === "all") {
+        return caseTypes.reduce((sum, type) => sum + (Number(data[type.key] || 0)), 0);
+    }
+
+    return caseTypes.reduce((sum, type) => {
+        if (category === "heart") {
+            return sum + (!isThoracicType(type) ? (Number(data[type.key] || 0)) : 0);
+        }
+
+        if (category === "thoracic") {
+            return sum + (isThoracicType(type) ? (Number(data[type.key] || 0)) : 0);
+        }
+
+        if (category === "structural") {
+            return sum + (isStructuralType(type) ? (Number(data[type.key] || 0)) : 0);
+        }
+
+        return sum;
+    }, 0);
+}
+
+function renderCaseSummary() {
+    const summary = document.getElementById("categorySummary");
+    if (!summary) return;
+
+    const cards = [
+        { label: "Heart Cases", value: getCategoryTotal("heart") },
+        { label: "Thoracic Cases", value: getCategoryTotal("thoracic") },
+        { label: "Structural Heart Cases", value: getCategoryTotal("structural") },
+        { label: "Full Total All Cases", value: getCategoryTotal("all") }
+    ];
+
+    summary.innerHTML = cards.map(card => `
+        <div class="summary-card">
+            <div class="label">${card.label}</div>
+            <div class="num" style="color: ${getCountColor(card.value)}">${card.value}</div>
+        </div>
+    `).join("");
+}
+
+function saveAdditionalProcedures() {
+    localStorage.setItem(`cvorAdditionalProcedures_${activeSection}`, JSON.stringify(additionalProcedureCounts));
+}
+
+function incrementAdditionalProcedure(key) {
+    if (!additionalProcedureCounts[key] && additionalProcedureCounts[key] !== 0) return;
+    additionalProcedureCounts[key] += 1;
+    saveAdditionalProcedures();
+    renderAdditionalProcedures();
+}
+
+function decrementAdditionalProcedure(key) {
+    if (!additionalProcedureCounts[key] && additionalProcedureCounts[key] !== 0) return;
+    if (additionalProcedureCounts[key] <= 0) return;
+    additionalProcedureCounts[key] -= 1;
+    saveAdditionalProcedures();
+    renderAdditionalProcedures();
+}
+
+function renderAdditionalProcedures() {
+    const grid = document.getElementById("procedureGrid");
+    if (!grid) return;
+
+    grid.innerHTML = additionalProcedureDefaults.map(proc => `
+        <div class="procedure-card">
+            <div class="label">${proc.label}</div>
+            <div class="procedure-actions">
+                <button type="button" onclick="decrementAdditionalProcedure('${proc.key}')" class="mini-button danger" aria-label="Decrease ${proc.label}">−</button>
+                <div class="procedure-value">${additionalProcedureCounts[proc.key] || 0}</div>
+                <button type="button" onclick="incrementAdditionalProcedure('${proc.key}')" class="type" aria-label="Increase ${proc.label}">+ 1</button>
+            </div>
+        </div>
+    `).join("");
+}
+
 function renderTypeList() {
     const typeList = document.getElementById("typeList");
     if (!typeList) return;
@@ -192,25 +378,23 @@ function renderTypeList() {
         wrapper.style.alignItems = "center";
         wrapper.appendChild(button);
 
-        if (!defaultKeySet.has(type.key)) {
-            const removeButton = document.createElement("button");
-            removeButton.type = "button";
-            removeButton.className = "remove-type";
-            removeButton.textContent = "×";
-            removeButton.title = "Remove case type";
-            removeButton.onclick = (event) => {
-                event.stopPropagation();
-                removeCaseType(type.key);
-            };
-            wrapper.appendChild(removeButton);
-        }
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "remove-type";
+        removeButton.textContent = "×";
+        removeButton.title = "Remove case type";
+        removeButton.onclick = (event) => {
+            event.stopPropagation();
+            removeCaseType(type.key);
+        };
+        wrapper.appendChild(removeButton);
 
         typeList.appendChild(wrapper);
     });
 }
 
 function saveCaseTypes() {
-    localStorage.setItem("cvorCaseTypes", JSON.stringify(caseTypes));
+    localStorage.setItem(`cvorCaseTypes_${activeSection}`, JSON.stringify(caseTypes));
 }
 
 function getAvailableYears() {
@@ -376,6 +560,7 @@ function updateDisplay() {
     const monthData = getMonthDataForSelectedPeriod();
     data = monthData;
     renderMonthlyStats();
+    renderCaseSummary();
 
     let total = 0;
 
@@ -394,7 +579,7 @@ function updateDisplay() {
 }
 
 function saveData() {
-    localStorage.setItem("cvorCases", JSON.stringify(caseRecords));
+    localStorage.setItem(`cvorCases_${activeSection}`, JSON.stringify(caseRecords));
 }
 
 function openModal() {
@@ -475,11 +660,6 @@ function addCaseType() {
 }
 
 function removeCaseType(key) {
-    if (defaultKeySet.has(key)) {
-        alert("Default case types cannot be removed.");
-        return;
-    }
-
     if (caseTypes.length <= 1) {
         alert("Keep at least one case type.");
         return;
@@ -520,6 +700,18 @@ document.querySelectorAll(".nav-btn").forEach(button => {
     button.addEventListener("click", () => switchView(button.dataset.view));
 });
 
+document.getElementById("prevSectionBtn")?.addEventListener("click", () => {
+    const idx = sectionOrder.indexOf(activeSection);
+    const prevSection = sectionOrder[(idx - 1 + sectionOrder.length) % sectionOrder.length];
+    switchSection(prevSection);
+});
+
+document.getElementById("nextSectionBtn")?.addEventListener("click", () => {
+    const idx = sectionOrder.indexOf(activeSection);
+    const nextSection = sectionOrder[(idx + 1) % sectionOrder.length];
+    switchSection(nextSection);
+});
+
 document.getElementById("prevYearBtn")?.addEventListener("click", () => {
     selectedYear -= 1;
     renderMonthlyStats();
@@ -530,7 +722,9 @@ document.getElementById("nextYearBtn")?.addEventListener("click", () => {
     renderMonthlyStats();
 });
 
+updateSectionHeader();
 normalizeData();
 updateDate();
 renderCaseGrid();
 renderMonthlyStats();
+renderAdditionalProcedures();
